@@ -7,7 +7,8 @@
 ## 常用命令
 git reset --hard origin/release_5.61.x   强制本地和远程一样
 git branch -u origin main:lgc/main       将本地的main推送到远程的lgc/main
-
+git config user.email "610826334@qq.com"
+git reset --soft HEAD~1
 
 
 
@@ -18,3 +19,8 @@ style     代码格式修改，不影响逻辑
 refactor  重构，不新增功能也不修 bug
 perf      性能优化 performance
 test      测试相关
+
+## 问题:
+- git reset 的用法是什么？
+
+- git merge和git rebase 有什么区别？
