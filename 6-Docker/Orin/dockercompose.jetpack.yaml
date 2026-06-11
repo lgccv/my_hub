@@ -1,0 +1,22 @@
+services:
+  ros2_container:
+    image: ros2
+    container_name: ros2-jetpack
+    runtime: nvidia     # 使用 NVIDIA容器运行时，这是让容器访问Orin GPU/CUDA的关键
+    network_mode: host  # 容器使用主机网络
+    ipc: host           # 容器和主机共享IPC/共享内存资源
+    privileged: true
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all    # 让容器看到所有 NVIDIA资源
+      - NVIDIA_DRIVER_CAPABILITIES=all  # 开启NVIDIA驱动能力
+      - ROS_DOMAIN_ID=0
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+    volumes:
+      - /home/std/workspace/jn_workspace_lgc:/workspace/jn_workspace_lgc
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev:/dev
+    working_dir: /workspace/jn_workspace_lgc
+    stdin_open: true
+    tty: true
+    command: /bin/zsh
