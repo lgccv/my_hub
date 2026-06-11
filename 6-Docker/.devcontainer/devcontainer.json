@@ -1,0 +1,231 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+{
+	"name": "native",
+	"build": {
+		"dockerfile": "Dockerfile",
+	},
+	"runArgs": [
+		// 下面三个选项为gdb调试所需要
+		"--cap-add=SYS_PTRACE",
+		"--security-opt",
+		"seccomp=unconfined",
+		// 容器中的 ping 权限支持
+		"--cap-add=NET_RAW",
+		// 若需要在容器中挂载串口设备，请打开下面一行配置
+		// "--device=/dev/ttyUSB0:/dev/apalis-uart3",
+		// 支持USB设备调试(默认不启用映射，编译服务器无对应设备)
+		// "--device=/dev/bus/usb:/dev/bus/usb",
+		"--hostname=sros-dev-env-main",
+		"--shm-size=1g"
+	],
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				// cpp
+				"ms-vscode.cpptools",
+				"ms-vscode.cpptools-extension-pack",
+				"ms-vscode.cmake-tools",
+				"twxs.cmake",
+				"cheshirekow.cmake-format",
+				"akiramiyakoda.cppincludeguard",
+				"mine.cpplint",
+				"matepek.vscode-catch2-test-adapter",
+				// python
+				"ms-python.python",
+				"charliermarsh.ruff",
+				"frhtylcn.pythonsnippets",
+				"littlefoxteam.vscode-python-test-adapter",
+				"ryanluker.vscode-coverage-gutters",
+				// shell
+				"timonwong.shellcheck",
+				"foxundermoon.shell-format",
+				// git
+				"donjayamanne.githistory",
+				"eamodio.gitlens",
+				// protobuf
+				"peterj.proto",
+				// others
+				"streetsidesoftware.code-spell-checker",
+				"ms-azuretools.vscode-docker",
+				"redhat.vscode-yaml",
+				"GitLab.gitlab-workflow",
+				"mechatroner.rainbow-csv",
+				"ms-vscode.live-server",
+				"psioniq.psi-header",
+				"emilast.LogFileHighlighter"
+			],
+			"settings": {
+				"files.insertFinalNewline": true,
+				"files.associations": {
+					"*.log.INFO.*": "log",
+					"sros.INFO": "log"
+				},
+				"C_Cpp.autoAddFileAssociations": false,
+				"C_Cpp.clang_format_path": "/root/.local/share/uv/tools/clang-format/bin/clang-format",
+				"C/C++ Include Guard.Comment Style": "Line",
+				"C/C++ Include Guard.Macro Type": "Filepath",
+				"C/C++ Include Guard.Remove Extension": false,
+				"C/C++ Include Guard.Spaces After Endif": 2,
+				"C/C++ Include Guard.Suffix": "_",
+				"cmake.options.statusBarVisibility": "visible",
+				"cmake.options.advanced": {
+					"buildPreset": {
+						"statusBarVisibility": "hidden"
+					},
+					"ctest": {
+						"statusBarVisibility": "hidden",
+						"projectStatusVisibility": "hidden"
+					},
+					"testPreset": {
+						"statusBarVisibility": "hidden"
+					},
+					"workflow": {
+						"statusBarVisibility": "hidden",
+						"projectStatusVisibility": "hidden"
+					},
+					"workflowPreset": {
+						"statusBarVisibility": "hidden",
+						"projectStatusVisibility": "hidden"
+					},
+					"packagePreset": {
+						"statusBarVisibility": "hidden",
+						"projectStatusVisibility": "hidden"
+					},
+					"cpack": {
+						"statusBarVisibility": "hidden"
+					}
+				},
+				"cmake.generator": "Unix Makefiles",
+				"cmake.enableTraceLogging": true,
+				"gitlab.showPipelineUpdateNotifications": true,
+				"git.repositoryScanMaxDepth": 10,
+				"[python]": {
+					"editor.defaultFormatter": "charliermarsh.ruff"
+				},
+				"cSpell.words": [
+					"SROS",
+					"SRTOS",
+					"Bootloader",
+					"modbus",
+					"protobuf",
+					"GPIO",
+					"USART",
+					"jaka", // https://www.jaka.com/
+					// https://standard-robots.yuque.com/group-rd/os4rbk/onkhsq
+					"EAC",
+					"EACP",
+					// https://standard-robots.yuque.com/group-rd/os4rbk/gyusdk
+					"SEAC",
+					"SEACP",
+					"bezier", // https://en.wikipedia.org/wiki/B%C3%A9zier_curve
+				],
+				"psi-header.config": {
+					"forceToTop": true,
+					"license": "Custom"
+				},
+				"psi-header.changes-tracking": {
+					"isActive": false,
+					"include": [
+						"cpp",
+						"python",
+						"shellscript"
+					],
+					"autoHeader": "manualSave"
+				},
+				"psi-header.variables": [
+					[
+						"company","Standard Robots Co"
+					]
+				],
+				"psi-header.lang-config": [
+					{
+						"language": "cpp",
+						"begin": "",
+						"prefix": "//",
+						"end": "",
+						"blankLinesAfter": 0
+					},
+					{
+						"language": "python",
+						"begin": "",
+						"prefix": "#",
+						"end": "",
+						"blankLinesAfter": 0,
+						"beforeHeader": []
+					},
+					{
+						"language": "shellscript",
+						"begin": "",
+						"prefix": "# ",
+						"end": "",
+						"blankLinesAfter": 0,
+						"beforeHeader": [
+							"#!/bin/sh"
+						]
+					}
+				],
+				"psi-header.templates": [
+					{
+						"language": "*",
+						"template": [
+							" Copyright <<year>> <<company>>. All rights reserved."
+						]
+					}
+				],
+				"logFileHighlighter.customPatterns": [
+					{
+						"pattern": "^E",
+						"foreground": "#ff0000",
+						"highlightEntireLine": true
+					},
+					{
+						"pattern": "^W",
+						"foreground": "#f58c03",
+						"highlightEntireLine": true
+					},
+				],
+				"logFileHighlighter.enableProgressIndicator": true,
+				"logFileHighlighter.progressIndicatorUnderlineColor": "#00ff1f8f",
+				"testMate.cpp.test.executables": "build-amd64/**/*_test",
+			},
+		}
+	},
+	"mounts": [
+		// 若想用本地zsh的配置和历史记录可以将下面三行配置打开
+		// "src=${localEnv:HOME}/.zshrc,dst=/root/.zshrc,type=bind",
+		// "src=${localEnv:HOME}/.oh-my-zsh,dst=/root/.oh-my-zsh,type=bind",
+		// "src=${localEnv:HOME}/.zsh_history,dst=/root/.zsh_history,type=bind",
+		// docker 嵌套，暂时没必要
+		"src=/var/run/docker.sock,dst=/var/run/docker.sock,type=bind",
+		"type=bind,source=/home/${localEnv:USER}/.ssh,target=/root/.ssh",
+		"src=/tmp/.X11-unix,dst=/tmp/.X11-unix,type=bind",
+	],
+	"remoteUser": "root",
+	"remoteEnv": {
+		// 若容器中运行UI程序出现如报错“Unable to init server: Could not connect: Connection refused”，
+		// 请在本地执行：“xhost +”
+		"DISPLAY": "${localEnv:DISPLAY}",
+		"GITLAB_PRIVATE_TOKEN": "${localEnv:GITLAB_PRIVATE_TOKEN}"
+	},
+	"forwardPorts": [
+		80, // 由于linux端口权限问题容器中的80端口默认会绑定到一个自动分配的端口
+		// 由于连接Matrix用的localhost，WS也会用localhost，所以需要将5002端口绑定当本机的5002端口
+		// 若本地5002被占用就会绑定到其他端口（可能为5003），这时Matrix就无法登录，需要清理本地被占用的5002端口
+		5002
+	],
+	"portsAttributes": {
+		"80": {
+			"label": "Matrix",
+			"onAutoForward": "openBrowser",
+		},
+		"5002": {
+			"label": "web-socket"
+		}
+	},
+	"otherPortsAttributes": {
+		"onAutoForward": "ignore"
+	},
+	"postCreateCommand": "prek install",
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace/sros-core,type=bind,consistency=cached",
+	"workspaceFolder": "/workspace/sros-core"
+}

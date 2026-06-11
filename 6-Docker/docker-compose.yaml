@@ -1,0 +1,17 @@
+services:
+  my_container:
+    build:
+      context: ./
+      dockerfile: Dockerfile.base
+    image: ubuntu22.04_base
+    container_name: my_container
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    volumes:
+      - /home/standard/code/docker:/workspace
+      - ~/.ssh:~/.ssh
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command: ["/bin/zsh"]
+    # command: sleep infinity
+    # command: g++ /workspace/src/main.cpp -o /workspace/main
