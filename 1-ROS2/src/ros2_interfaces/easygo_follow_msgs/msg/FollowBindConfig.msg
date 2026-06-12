@@ -1,0 +1,4 @@
+float64 bind_distance_min_m
+float64 bind_distance_max_m
+int32 camera_mount_height_mm
+float64 camera_mount_pitch_deg

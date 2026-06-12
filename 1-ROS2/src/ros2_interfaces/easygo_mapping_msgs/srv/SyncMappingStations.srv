@@ -1,0 +1,6 @@
+MappingStation[] station
+bool final_update
+---
+bool accepted
+uint16 code
+string message

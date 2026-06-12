@@ -1,0 +1,10 @@
+std_msgs/Header header
+string track_id
+bool visible
+float32 confidence
+float64 x_m
+float64 y_m
+float64 yaw_rad
+float64 vx_mps
+float64 vy_mps
+float64 wz_radps

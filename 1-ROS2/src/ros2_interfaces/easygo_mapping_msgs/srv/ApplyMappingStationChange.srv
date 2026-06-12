@@ -1,0 +1,12 @@
+uint8 OP_CREATE=1
+uint8 OP_UPDATE=2
+uint8 OP_DELETE=3
+
+string map_name
+uint8 operation
+int32 station_id
+string station_payload_json
+---
+bool accepted
+uint16 code
+string message

@@ -1,0 +1,11 @@
+float64 target_distance_m
+float64 max_linear_speed_mps
+float64 min_linear_speed_mps
+float64 max_linear_accel_mps2
+float64 max_linear_decel_mps2
+float64 max_angular_speed_radps
+float64 max_angular_accel_radps2
+float64 max_angular_decel_radps2
+float64 target_lost_timeout_s
+float64 obstacle_block_timeout_s
+float64 obstacle_bypass_speed_mps

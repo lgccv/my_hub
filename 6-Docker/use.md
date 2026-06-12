@@ -54,3 +54,7 @@ sudo systemctl restart docker
 docker run --rm --gpus all nvidia/cuda:12.1.0-base-ubuntu22.04 nvidia-smi
 
 ```
+
+
+# 从image反推dockerfile
+docker history --no-trunc ros2   # 不截断输出ros2镜像
