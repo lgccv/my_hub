@@ -11,6 +11,15 @@
 
 
 ## 2、如何断点main.cpp文件
+colcon build --packages-select custom_interfaces -DCMAKE_BUILD_TYPE=Debug
+
+# 安装moveit
+
+# 安装gazebo
+
+# 安装
+
+
 
 # 常用指令
 $ ros2 pkg create --build-type ament_cmake learning_pkg_c        # C++

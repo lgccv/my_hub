@@ -1,0 +1,422 @@
+
+from __future__ import annotations
+from typing import Any
+import numpy as np
+from .ops import xywh2ltwh
+from .basetrack import BaseTrack, TrackState
+from . import matching
+from .kalman_filter import KalmanFilterXYAH
+
+
+class STrack(BaseTrack):
+    """Single object tracking representation that uses Kalman filtering for state estimation.
+
+    This class is responsible for storing all the information regarding individual tracklets and performs state updates
+    and predictions based on Kalman filter.
+
+    Attributes:
+        shared_kalman (KalmanFilterXYAH): Shared Kalman filter used across all STrack instances for prediction.
+        _tlwh (np.ndarray): Private attribute to store top-left corner coordinates and width and height of bounding box.
+        kalman_filter (KalmanFilterXYAH): Instance of Kalman filter used for this particular object track.
+        mean (np.ndarray): Mean state estimate vector.
+        covariance (np.ndarray): Covariance of state estimate.
+        is_activated (bool): Boolean flag indicating if the track has been activated.
+        score (float): Confidence score of the track.
+        tracklet_len (int): Length of the tracklet.
+        cls (Any): Class label for the object.
+        idx (int): Index or identifier for the object.
+        frame_id (int): Current frame ID.
+        start_frame (int): Frame where the object was first detected.
+        angle (float | None): Optional angle information for oriented bounding boxes.
+
+    Methods:
+        predict: Predict the next state of the object using Kalman filter.
+        multi_predict: Predict the next states for multiple tracks.
+        multi_gmc: Update multiple track states using a homography matrix.
+        activate: Activate a new tracklet.
+        re_activate: Reactivate a previously lost tracklet.
+        update: Update the state of a matched track.
+        convert_coords: Convert bounding box to x-y-aspect-height format.
+        tlwh_to_xyah: Convert tlwh bounding box to xyah format.
+
+    Examples:
+        Initialize and activate a new track
+        >>> track = STrack(xywh=[100, 200, 50, 80, 0], score=0.9, cls="person")
+        >>> track.activate(kalman_filter=KalmanFilterXYAH(), frame_id=1)
+    """
+
+    shared_kalman = KalmanFilterXYAH()
+
+    def __init__(self, xywh: list[float], score: float, cls: Any):
+        """Initialize a new STrack instance.
+
+        Args:
+            xywh (list[float]): Bounding box coordinates and dimensions in the format (x, y, w, h, [a], idx), where (x,
+                y) is the center, (w, h) are width and height, [a] is optional aspect ratio, and idx is the id.
+            score (float): Confidence score of the detection.
+            cls (Any): Class label for the detected object.
+
+        Examples:
+            >>> xywh = [100.0, 150.0, 50.0, 75.0, 1]
+            >>> score = 0.9
+            >>> cls = "person"
+            >>> track = STrack(xywh, score, cls)
+        """
+        super().__init__()
+        # xywh+idx or xywha+idx
+        assert len(xywh) in {5, 6}, f"expected 5 or 6 values but got {len(xywh)}"
+        self._tlwh = np.asarray(xywh2ltwh(xywh[:4]), dtype=np.float32)
+        self.kalman_filter = None
+        self.mean, self.covariance = None, None
+        self.is_activated = False
+
+        self.score = score
+        self.tracklet_len = 0
+        self.cls = cls
+        self.idx = xywh[-1]
+        self.angle = xywh[4] if len(xywh) == 6 else None
+
+    def predict(self):
+        """Predict the next state (mean and covariance) of the object using the Kalman filter."""
+        mean_state = self.mean.copy()
+        if self.state != TrackState.Tracked:
+            mean_state[7] = 0
+        self.mean, self.covariance = self.kalman_filter.predict(mean_state, self.covariance)
+
+    @staticmethod
+    def multi_predict(stracks: list[STrack]):
+        """Perform multi-object predictive tracking using Kalman filter for the provided list of STrack instances."""
+        if len(stracks) <= 0:
+            return
+        multi_mean = np.asarray([st.mean.copy() for st in stracks])
+        multi_covariance = np.asarray([st.covariance for st in stracks])
+        for i, st in enumerate(stracks):
+            if st.state != TrackState.Tracked:
+                multi_mean[i][7] = 0
+        multi_mean, multi_covariance = STrack.shared_kalman.multi_predict(multi_mean, multi_covariance)
+        for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
+            stracks[i].mean = mean
+            stracks[i].covariance = cov
+
+    @staticmethod
+    def multi_gmc(stracks: list[STrack], H: np.ndarray = np.eye(2, 3)):
+        """Update state tracks positions and covariances using a homography matrix for multiple tracks."""
+        if stracks:
+            multi_mean = np.asarray([st.mean.copy() for st in stracks])
+            multi_covariance = np.asarray([st.covariance for st in stracks])
+
+            R = H[:2, :2]
+            R8x8 = np.kron(np.eye(4, dtype=float), R)
+            t = H[:2, 2]
+
+            for i, (mean, cov) in enumerate(zip(multi_mean, multi_covariance)):
+                mean = R8x8.dot(mean)
+                mean[:2] += t
+                cov = R8x8.dot(cov).dot(R8x8.transpose())
+
+                stracks[i].mean = mean
+                stracks[i].covariance = cov
+
+    def activate(self, kalman_filter: KalmanFilterXYAH, frame_id: int):
+        """Activate a new tracklet using the provided Kalman filter and initialize its state and covariance."""
+        self.kalman_filter = kalman_filter
+        self.track_id = self.next_id()
+        self.mean, self.covariance = self.kalman_filter.initiate(self.convert_coords(self._tlwh))
+
+        self.tracklet_len = 0
+        self.state = TrackState.Tracked
+        if frame_id == 1:
+            self.is_activated = True
+        self.frame_id = frame_id
+        self.start_frame = frame_id
+
+    def re_activate(self, new_track: STrack, frame_id: int, new_id: bool = False):
+        """Reactivate a previously lost track using new detection data and update its state and attributes."""
+        self.mean, self.covariance = self.kalman_filter.update(
+            self.mean, self.covariance, self.convert_coords(new_track.tlwh)
+        )
+        self.tracklet_len = 0
+        self.state = TrackState.Tracked
+        self.is_activated = True
+        self.frame_id = frame_id
+        if new_id:
+            self.track_id = self.next_id()
+        self.score = new_track.score
+        self.cls = new_track.cls
+        self.angle = new_track.angle
+        self.idx = new_track.idx
+
+    def update(self, new_track: STrack, frame_id: int):
+        """Update the state of a matched track.
+
+        Args:
+            new_track (STrack): The new track containing updated information.
+            frame_id (int): The ID of the current frame.
+
+        Examples:
+            Update the state of a track with new detection information
+            >>> track = STrack([100, 200, 50, 80, 0.9, 1])
+            >>> new_track = STrack([105, 205, 55, 85, 0.95, 1])
+            >>> track.update(new_track, 2)
+        """
+        self.frame_id = frame_id
+        self.tracklet_len += 1
+
+        new_tlwh = new_track.tlwh
+        self.mean, self.covariance = self.kalman_filter.update(
+            self.mean, self.covariance, self.convert_coords(new_tlwh)
+        )
+        self.state = TrackState.Tracked
+        self.is_activated = True
+
+        self.score = new_track.score
+        self.cls = new_track.cls
+        self.angle = new_track.angle
+        self.idx = new_track.idx
+
+    def convert_coords(self, tlwh: np.ndarray) -> np.ndarray:
+        """Convert a bounding box's top-left-width-height format to its x-y-aspect-height equivalent."""
+        return self.tlwh_to_xyah(tlwh)
+
+    @property
+    def tlwh(self) -> np.ndarray:
+        """Get the bounding box in top-left-width-height format from the current state estimate."""
+        if self.mean is None:
+            return self._tlwh.copy()
+        ret = self.mean[:4].copy()
+        ret[2] *= ret[3]
+        ret[:2] -= ret[2:] / 2
+        return ret
+
+    @property
+    def xyxy(self) -> np.ndarray:
+        """Convert bounding box from (top left x, top left y, width, height) to (min x, min y, max x, max y) format."""
+        ret = self.tlwh.copy()
+        ret[2:] += ret[:2]
+        return ret
+
+    @staticmethod
+    def tlwh_to_xyah(tlwh: np.ndarray) -> np.ndarray:
+        """Convert bounding box from tlwh format to center-x-center-y-aspect-height (xyah) format."""
+        ret = np.asarray(tlwh).copy()
+        ret[:2] += ret[2:] / 2
+        ret[2] /= ret[3]
+        return ret
+
+    @property
+    def xywh(self) -> np.ndarray:
+        """Get the current position of the bounding box in (center x, center y, width, height) format."""
+        ret = np.asarray(self.tlwh).copy()
+        ret[:2] += ret[2:] / 2
+        return ret
+
+    @property
+    def xywha(self) -> np.ndarray:
+        """Get position in (center x, center y, width, height, angle) format, warning if angle is missing."""
+        if self.angle is None:
+            LOGGER.warning("`angle` attr not found, returning `xywh` instead.")
+            return self.xywh
+        return np.concatenate([self.xywh, self.angle[None]])
+
+    @property
+    def result(self) -> list[float]:
+        """Get the current tracking results in the appropriate bounding box format."""
+        coords = self.xyxy if self.angle is None else self.xywha
+        return [*coords.tolist(), self.track_id, self.score, self.cls, self.idx]
+
+    def __repr__(self) -> str:
+        """Return a string representation of the STrack object including start frame, end frame, and track ID."""
+        return f"OT_{self.track_id}_({self.start_frame}-{self.end_frame})"
+    
+class BYTETracker:
+    def __init__(self, track_high_thresh,track_low_thresh,new_track_thresh,frame_rate,match_thresh,fuse_score):
+        self.tracked_stracks = []
+        self.lost_stracks = []
+        self.removed_stracks = []
+
+        self.frame_id = 0
+
+        self.track_high_thresh = track_high_thresh
+        self.track_low_thresh = track_low_thresh
+        self.new_track_thresh = new_track_thresh
+        self.match_thresh = match_thresh
+        self.max_time_lost = frame_rate
+        self.fuse_score = fuse_score
+        self.kalman_filter = self.get_kalmanfilter()
+        self.reset_id()
+
+    def update(self, results, img: np.ndarray | None = None, feats: np.ndarray | None = None) -> np.ndarray:
+        """Update the tracker with new detections and return the current list of tracked objects."""
+        # 函数说明:用当前检测结果更新跟踪器，并返回当前轨迹
+        self.frame_id += 1                  
+        activated_stracks = []              
+        refind_stracks = []                 
+        lost_stracks = []                   
+        removed_stracks = []               
+
+        scores = results.conf               
+        remain_inds = scores >= self.track_high_thresh    
+        inds_low = scores > self.track_low_thresh         
+        inds_high = scores < self.track_high_thresh       
+
+        inds_second = inds_low & inds_high                     
+        results_second = results[inds_second]                  
+        results = results[remain_inds]                         
+        feats_keep = feats_second = img
+        detections = self.init_track(results)  # 把当前高分检测结果转成一组STrack对象，放到detections里。每个STrack可以理解成“候选轨迹实例”，里面有框，分数，类别等信息
+        # Add newly detected tracklets to tracked_stracks
+        unconfirmed = []
+        tracked_stracks = []  # type: list[STrack]
+        for track in self.tracked_stracks:
+            if not track.is_activated:     # 说明这个轨迹还不够稳定，放进unconfirmed
+                unconfirmed.append(track)  # 只出现过很少次数，还需要再
+            else:
+                tracked_stracks.append(track)  # 存放已确认、正常跟踪中的轨迹
+        # Step 2: First association, with high score detection boxes
+        strack_pool = self.joint_stracks(tracked_stracks, self.lost_stracks)  # 把当前已经确认的轨迹和历史丢失轨迹合并成一个池子
+        # Predict the current location with KF
+        self.multi_predict(strack_pool)  # 用Kalman Filter先预测这些轨迹在当前帧应该出现的位置
+
+        dists = self.get_dists(strack_pool, detections)  # 计算历史轨迹和当前高分检测之间的距离矩阵
+        matches, u_track, u_detection = matching.linear_assignment(dists, thresh=self.match_thresh)  # 用匈牙利算法做最优匹配:成功匹配的、没匹配上的轨迹索引、没匹配上的检测索引
+
+        for itracked, idet in matches:  # 取出匹配到的轨迹和检测
+            track = strack_pool[itracked]
+            det = detections[idet]
+            if track.state == TrackState.Tracked:   # 如果这个轨迹原本就是Tracked状态
+                track.update(det, self.frame_id)    # 用新检测更新它
+                activated_stracks.append(track)     # 加入 activated_stracks,正常连续跟踪
+            else:
+                track.re_activate(det, self.frame_id, new_id=False)   # 重新激活，加入refind_stracks,丢过一次,现在又找回来
+                refind_stracks.append(track)
+        # Step 3: Second association, with low score detection boxes association the untrack to the low score detections
+        detections_second = self.init_track(results_second, feats_second)  # 将中等分数框包装成STrack
+        r_tracked_stracks = [strack_pool[i] for i in u_track if strack_pool[i].state == TrackState.Tracked]  # 只取第一轮未匹配上的，且状态是Tracked的轨迹
+        # TODO
+        dists = matching.iou_distance(r_tracked_stracks, detections_second)  # 计算这些轨迹和中等分数框的IOU距离
+        matches, u_track, _u_detection_second = matching.linear_assignment(dists, thresh=0.5)  # 再次做匹配，这次阈值固定是0.5
+        for itracked, idet in matches:
+            track = r_tracked_stracks[itracked]
+            det = detections_second[idet]
+            if track.state == TrackState.Tracked:  # 匹配成功的轨迹继续update()或 re_activate()
+                track.update(det, self.frame_id)
+                activated_stracks.append(track)
+            else:
+                track.re_activate(det, self.frame_id, new_id=False)
+                refind_stracks.append(track)
+
+        for it in u_track:                       # 遍历仍未匹配上的轨迹索引
+            track = r_tracked_stracks[it]        # 取对应轨迹
+            if track.state != TrackState.Lost:   # 如果它还不是lost
+                track.mark_lost()                # 标记未lost
+                lost_stracks.append(track)       # 加入lost_stracks,这表示不是立刻删除，只是暂时看不见了
+        # Deal with unconfirmed tracks, usually tracks with only one beginning frame
+        detections = [detections[i] for i in u_detection]   # 把第一轮没匹配上的高分检测拿出来
+        dists = self.get_dists(unconfirmed, detections)     # 计算未确认轨迹和这些检测的距离
+        matches, u_unconfirmed, u_detection = matching.linear_assignment(dists, thresh=0.7)   # 再做一次匹配
+        for itracked, idet in matches:  # 匹配成功的未确认轨迹，更新并转正，加入activated_stracks
+            unconfirmed[itracked].update(detections[idet], self.frame_id)
+            activated_stracks.append(unconfirmed[itracked])
+        for it in u_unconfirmed:  # 还是匹配不上的未确认轨迹，直接移除
+            track = unconfirmed[it]
+            track.mark_removed()
+            removed_stracks.append(track)
+        # Step 4: Init new stracks
+        for inew in u_detection:  # 遍历还没匹配上的检测，新目标出现了
+            track = detections[inew]
+            if track.score < self.new_track_thresh:   # 如果分数低于new_track_threash,不创建新轨迹
+                continue
+            track.activate(self.kalman_filter, self.frame_id)  # 正式分配一个新的track_id
+            activated_stracks.append(track)
+        # Step 5: Update state
+        for track in self.lost_stracks:    # 把丢失太久的轨迹彻底移除
+            if self.frame_id - track.end_frame > self.max_time_lost:
+                track.mark_removed()
+                removed_stracks.append(track)
+
+        self.tracked_stracks = [t for t in self.tracked_stracks if t.state == TrackState.Tracked]  # 先把 self.tracked_stracks 里不是 Tracked 的清掉
+        self.tracked_stracks = self.joint_stracks(self.tracked_stracks, activated_stracks)         # 把本帧 activated_stracks 合并进正式轨迹列表
+        self.tracked_stracks = self.joint_stracks(self.tracked_stracks, refind_stracks)            # 再把 refind_stracks 合并进去
+        self.lost_stracks = self.sub_stracks(self.lost_stracks, self.tracked_stracks)              # 从 lost_stracks 中减去那些已经重新变成 tracked 的
+        self.lost_stracks.extend(lost_stracks)                                                     # 把本帧新丢失的加入 lost_stracks
+        self.lost_stracks = self.sub_stracks(self.lost_stracks, self.removed_stracks)              # 再从 lost_stracks 中去掉已经 removed 的
+        self.tracked_stracks, self.lost_stracks = self.remove_duplicate_stracks(self.tracked_stracks, self.lost_stracks)  # 去重，避免 tracked 和 lost 里保留重复轨迹
+        self.removed_stracks.extend(removed_stracks)  # 把本帧 removed 追加到总 removed 列表
+        if len(self.removed_stracks) > 1000:
+            self.removed_stracks = self.removed_stracks[-999:]  # clip remove stracks to 1000 maximum
+
+        return np.asarray([x.result for x in self.tracked_stracks if x.is_activated], dtype=np.float32)  # 只返回 self.tracked_stracks 中 is_activated 的轨迹
+    def get_kalmanfilter(self) -> KalmanFilterXYAH:
+        """Return a Kalman filter object for tracking bounding boxes using KalmanFilterXYAH."""
+        return KalmanFilterXYAH()
+
+    def init_track(self, results, img: np.ndarray | None = None) -> list[STrack]:
+        """Initialize object tracking with given detections, scores, and class labels using the STrack algorithm."""
+        if len(results) == 0:
+            return []
+        bboxes = results.xywhr if hasattr(results, "xywhr") else results.xywh
+        bboxes = np.concatenate([bboxes, np.arange(len(bboxes)).reshape(-1, 1)], axis=-1)
+        return [STrack(xywh, s, c) for (xywh, s, c) in zip(bboxes, results.conf, results.cls)]
+
+    def get_dists(self, tracks: list[STrack], detections: list[STrack]) -> np.ndarray:
+        """Calculate the distance between tracks and detections using IoU and optionally fuse scores."""
+        dists = matching.iou_distance(tracks, detections)
+        if self.fuse_score:
+            dists = matching.fuse_score(dists, detections)
+        return dists
+
+    def multi_predict(self, tracks: list[STrack]):
+        """Predict the next states for multiple tracks using Kalman filter."""
+        STrack.multi_predict(tracks)
+
+    @staticmethod
+    def reset_id():
+        """Reset the ID counter for STrack instances to ensure unique track IDs across tracking sessions."""
+        STrack.reset_id()
+
+    def reset(self):
+        """Reset the tracker by clearing all tracked, lost, and removed tracks and reinitializing the Kalman filter."""
+        self.tracked_stracks = []  # type: list[STrack]
+        self.lost_stracks = []  # type: list[STrack]
+        self.removed_stracks = []  # type: list[STrack]
+        self.frame_id = 0
+        self.kalman_filter = self.get_kalmanfilter()
+        self.reset_id()
+
+    @staticmethod
+    def joint_stracks(tlista: list[STrack], tlistb: list[STrack]) -> list[STrack]:
+        """Combine two lists of STrack objects into a single list, ensuring no duplicates based on track IDs."""
+        exists = {}
+        res = []
+        for t in tlista:
+            exists[t.track_id] = 1
+            res.append(t)
+        for t in tlistb:
+            tid = t.track_id
+            if not exists.get(tid, 0):
+                exists[tid] = 1
+                res.append(t)
+        return res
+
+    @staticmethod
+    def sub_stracks(tlista: list[STrack], tlistb: list[STrack]) -> list[STrack]:
+        """Filter out the stracks present in the second list from the first list."""
+        track_ids_b = {t.track_id for t in tlistb}
+        return [t for t in tlista if t.track_id not in track_ids_b]
+
+    @staticmethod
+    def remove_duplicate_stracks(stracksa: list[STrack], stracksb: list[STrack]) -> tuple[list[STrack], list[STrack]]:
+        """Remove duplicate stracks from two lists based on Intersection over Union (IoU) distance."""
+        pdist = matching.iou_distance(stracksa, stracksb)
+        pairs = np.where(pdist < 0.15)
+        dupa, dupb = [], []
+        for p, q in zip(*pairs):
+            timep = stracksa[p].frame_id - stracksa[p].start_frame
+            timeq = stracksb[q].frame_id - stracksb[q].start_frame
+            if timep > timeq:
+                dupb.append(q)
+            else:
+                dupa.append(p)
+        resa = [t for i, t in enumerate(stracksa) if i not in dupa]
+        resb = [t for i, t in enumerate(stracksb) if i not in dupb]
+        return resa, resb
