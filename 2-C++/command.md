@@ -4,3 +4,8 @@
 ## 查找PCL的头文件和库文件在哪里
 - find /usr /usr/local /opt -path '*/pcl/point_cloud.h' 2>/dev/null
 - find /usr /usr/local /opt /lib -name 'libpcl*.so*' 2>/dev/null
+
+## 如何查电脑是什么系统
+- uname -a
+- uname -m
+- cat /etc/os-release
