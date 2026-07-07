@@ -18,10 +18,12 @@ Host github.com
 
 ## 常用命令
 - git reset --hard origin/release_5.61.x   强制本地和远程一样
-- git push --force-with-lease origin lgc/main:main  强制远程(main)和本地(lgc/main)一样
+- git push --force origin lgc/main:main  强制远程(main)和本地(lgc/main)一样
 - git branch -u origin main:lgc/main       将本地的main推送到远程的lgc/main
-- git config user.email "610826334@qq.com"
+- git config --global user.email "610826334@qq.com"
+- git config --global user.name "你的名字"
 - git reset --soft HEAD~1   回退一次commit
+- git merge --abort 停止这次合并
 
 
 

@@ -661,6 +661,214 @@ class LinePalletDetector:
         line_pallet_info.norm = norm if float(np.dot(middle_mean_point, norm)) > 0 else -norm
         return True
 
+def transform_point(tf,point):
+    homogeneous = np.array([point[0],point[1],1.0],dtype=np.float64)
+    transformed = tf @ homogeneous
+    return transformed[:2]
+
+def make_tf(x,y,yaw):
+    cos_yaw = math.cos(yaw)
+    sin_yaw = math.sin(yaw)
+    return np.array([
+                        [cos_yaw,-sin_yaw,x],
+                        [sin_yaw,cos_yaw,y],
+                        [0.0,0.0,1.0]
+                    ],dtype=np.float64)
+
+def quaternion_from_yaw(yaw):
+    half_yaw = yaw * 0.5
+    return np.array([math.cos(half_yaw),0.0,0.0,math.sin(half_yaw)],dtype=np.float64)
+
+
+def quaternion_multiply(lhs: np.ndarray, rhs: np.ndarray) -> np.ndarray:
+    lw, lx, ly, lz = lhs
+    rw, rx, ry, rz = rhs
+    return np.array(
+        [
+            lw * rw - lx * rx - ly * ry - lz * rz,
+            lw * rx + lx * rw + ly * rz - lz * ry,
+            lw * ry - lx * rz + ly * rw + lz * rx,
+            lw * rz + lx * ry - ly * rx + lz * rw,
+        ],
+        dtype=np.float64,
+    )
+
+def format_quat(quat: np.ndarray) -> str:
+    return f"[w={quat[0]:.7g}, x={quat[1]:.7g}, y={quat[2]:.7g}, z={quat[3]:.7g}]"
+
+def normalize_angle(angle):
+    while angle > math.pi:
+        angle -= 2.0*math.pi
+    while angle < -math.pi:
+        angle += 2.0*math.pi
+    return angle
+
+def coord_to_convert(result,detected_count,detect_count_thresh):
+    detected_poses = []
+    detected_quats = []
+    center_scan_to_agv_tf = np.array([[-1.00000e+00, -1.22465e-16, -6.63000e-01],
+                                      [1.22465e-16, -1.00000e+00,  0.00000e+00],
+                                      [0.00000e+00,  0.00000e+00,  1.00000e+00]],dtype=np.float64)
+    sensor_xy = np.array([result.x,result.y],dtype=np.float64)
+    goal_in_agv = transform_point(center_scan_to_agv_tf,sensor_xy)
+    print(f"I: 在目标小车下的坐标goal_in_agv_pose:{goal_in_agv}")
+
+
+    agv_x = -0.568354
+    agv_y = -3.87521
+    agv_yaw = -0.000411067
+    world_tf = make_tf(agv_x,agv_y,agv_yaw)
+    goal_in_world = transform_point(world_tf,goal_in_agv)
+    print(f"目标在世界坐标系下的坐标goal_in_world_pose:{goal_in_world}")
+
+
+    # 下面开始计算角度
+    q_result = quaternion_from_yaw(result.angle)
+    q_amr = quaternion_from_yaw(agv_yaw)
+
+    q_world = quaternion_multiply(q_amr,q_result)
+    print(f"I: q_world:{format_quat(q_world)}")
+    detected_quats.append(q_world)
+
+    goal_in_world_pose_xyyaw = np.array(
+        [goal_in_world[0],goal_in_world[1],0.0],dtype=np.float64)
+    
+    print(f"I: 合成所有的目标点坐标goal_in_world_pose_xyyaw:{goal_in_world_pose_xyyaw}")
+    detected_poses.append(goal_in_world_pose_xyyaw)
+
+    world_yaw = normalize_angle(agv_yaw + result.angle)
+    print(
+        "I: replay summary: "
+        f"goal_in_agv=({goal_in_agv[0]:.6f}, {goal_in_agv[1]:.6f}), "
+        f"goal_in_world=({goal_in_world[0]:.6f}, {goal_in_world[1]:.6f}), "
+        f"world_yaw={world_yaw:.6f} rad ({world_yaw * 180.0 / math.pi:.3f} deg)"
+    )
+
+    return detected_poses, detected_quats
+
+
+def quaternion_normalize(quat):
+    norm = np.linalg.norm(quat)
+    if norm ==0 :
+        return np.array([1.0,0.0,0.0,0.0],dtype=np.float64)
+    return quat / norm
+
+
+
+def quaternion_slerp(lhs,rhs,t):
+    lhs = quaternion_normalize(lhs)
+    rhs = quaternion_normalize(rhs)
+    dot = float(np.dot(lhs,rhs))
+
+    if dot < 0.0:
+        rhs = -rhs
+        dot = -dot
+
+    dot = max(-1.0,min(1.0,dot))
+    if dot > 0.9995:
+        return quaternion_normalize(lhs +t*(rhs-lhs))
+    
+    theta_0 = math.acos(dot)
+    theta = theta_0 * t
+    sin_theta = math.sin(theta)
+    sin_theta_0 = math.sin(theta_0)
+    scale_lhs = math.cos(theta) - dot*sin_theta / sin_theta_0
+    scale_rhs = sin_theta /sin_theta_0
+    return quaternion_normalize(scale_lhs*lhs + scale_rhs * rhs)
+
+
+
+def compute_quaternion_smoothing_advanced(quats):
+    if len(quats) == 0:
+        return np.array([1.0,0.0,0.0,0.0],dtype=np.float64)
+    if len(quats) == 1:
+        return quaternion_normalize(quats[0])
+    
+    first_quat = quaternion_normalize(quats[0])
+    normalized_quats = []
+
+    for quat in quats:
+        quat = quaternion_normalize(quat)
+        normalized_quats.append(-quat if float(np.dot(first_quat,quat)) <0.0 else quat)
+
+    filtered_quats = []
+    if len(normalized_quats) >=3:
+        angle_diffs = np.zeros(len(normalized_quats),dtype=np.float64)
+        for i,quat_i in enumerate(normalized_quats):
+            for j,quat_j in enumerate(normalized_quats):
+                if i==j:
+                    continue
+                dot = max(-1.0, min(1.0,abs(float(np.dot(quat_i,quat_j)))))
+                angle_diffs[i] += math.acos(dot) *2.0
+            angle_diffs[i] /= len(normalized_quats) -1
+
+        mean_diff = float(angle_diffs.mean())
+        std_diff = float(angle_diffs.std())
+        threshold = mean_diff + 2.0*std_diff
+        filtered_quats = [quat for quat,angle_diff in zip(normalized_quats,angle_diffs) if angle_diff <= threshold]
+
+    if len(filtered_quats) < 2:
+        filtered_quats = normalized_quats
+
+    result =  filtered_quats[0]
+    total_weight = 0.0
+    center = len(filtered_quats) /2.0
+    sigma = len(filtered_quats) / 4.0
+    for i, quat in enumerate(filtered_quats):
+        weight = math.exp(-0.5*((i-center)/sigma)**2)
+        if i==0:
+            result = quat
+        else:
+            t = weight / (total_weight + weight)
+            result = quaternion_slerp(result,quat,t)
+        total_weight += weight
+
+    return quaternion_normalize(result)
+
+def quaternion_to_euler(quat):
+    w,x,y,z = quaternion_normalize(quat)
+    sinr_cosp = 2.0 * (w*x+y*z)
+    cosr_cosp = 1.0-2.0*(x*x + y*y)
+    roll = math.atan2(sinr_cosp,cosr_cosp)
+
+    sinp = 2.0*(w*y - z*x)
+    if abs(sinp) >=1.0:
+        pitch = math.copysign(math.pi /2.0,sinp)
+    else:
+        pitch = math.asin(sinp)
+
+    siny_cosp = 2.0 * (w*z +x*y)
+    cosy_cosp = 1.0-2.0*(y*y +z*z)
+    yaw = math.atan2(siny_cosp,cosy_cosp)
+    return np.array([roll,pitch,yaw],dtype= np.float64)
+
+
+
+
+def smoothed_detection_result(detected_poses,detected_quats,repeat_count):
+    if len(detected_poses) ==0 or len(detected_quats) ==0:
+        return 
+    
+    replay_poses = [pose.copy() for _ in range(repeat_count) for pose in detected_poses]
+    replay_quats = [quat.copy() for _ in range(repeat_count) for quat in detected_quats]
+
+    mean_pos = np.zeros(2,dtype=np.float64)
+    for pose in replay_poses:
+        print("I: p:{pose}")
+        mean_pos += pose[:2]
+    mean_pos /= len(replay_poses)
+
+    mean_quant = compute_quaternion_smoothing_advanced(replay_quats)
+    euler_angles = quaternion_to_euler(mean_quant)
+    print(f"I: quaternionToEuler:{euler_angles}")
+    mean_yaw = float(euler_angles[2])
+    print(f"I: quaternion smoothed mean_yaw: {mean_yaw/math.pi*180.0}")
+
+    mean_pose = np.array([mean_pos[0],mean_pos[1],mean_yaw],dtype=np.float64)
+    print(f"I: smoothed mean_pose:"
+          f"x={mean_pose[0]:.6f},y={mean_pose[1]:.6f}"
+          f"yaw={mean_pose[2]:.6f} rad ({mean_pose[2] / math.pi *180.0:.3f}) deg")
+
 
 def main(argv: list[str]) -> int:
     if len(argv) > 1 and argv[1] in {"-h", "--help"}:
@@ -696,6 +904,15 @@ def main(argv: list[str]) -> int:
         f"debug_line_infos: {len(detector.debug_line_infos_)}"
     )
 
+    detected_poses,detected_quats = coord_to_convert(detect_result,detected_count = 0,detect_count_thresh=5)
+    print(f"I: detected_poses size:{len(detected_poses)}")
+    print(f"I: detected_quats size:{len(detected_quats)}")
+    print("I: ==================          end          ==================")
+    print("detected_poses:",detected_poses)
+    print("detected_quats:",detected_quats)
+
+    # 做平滑，位置算均值，角度用四元数平滑
+    smoothed_detection_result(detected_poses,detected_quats,repeat_count=4)
     return 0 if detect_result.is_available else 2
 
 
