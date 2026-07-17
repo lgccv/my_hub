@@ -1,4 +1,17 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda"
+    "python-envs.defaultPackageManager": "ms-python.python:conda",
+    "cmake.sourceDirectory": "/workspace/src/perception-platform/scheduler",
+    "cmake.buildDirectory": "/workspace/src/perception-platform/build/linux-arm64-jetson/scheduler/build",
+    "cmake.configureSettings": {
+    "CMAKE_BUILD_TYPE": "Release",
+    "THIRD_PARTY_LIB_DIR": "/workspace/src/perception-platform/build/linux-arm64-jetson/scheduler/lib",
+    "CMAKE_PROJECT_INCLUDE": "/workspace/src/perception-platform/cmake/PerceptionSubprojectEnvironment.cmake",
+    "PERC_PREBUILD_PLATFORM": "linux-arm64-jetson",
+    "PERC_PREBUILD_DIR": "/workspace/src/perception-platform/scheduler/prebuild/linux-arm64-jetson",
+    "PERC_RUNTIME_PROFILE": "jetson",
+    "PERC_PREBUILD_PROFILE": "jetson",
+    "perc_infra_DIR": "/workspace/src/perception-platform/build/linux-arm64-jetson/infra/build",
+    "perc_pipeline_DIR": "/workspace/src/perception-platform/build/linux-arm64-jetson/pipeline/build",
+    "perc_scheduler_DIR": "/workspace/src/perception-platform/build/linux-arm64-jetson/scheduler/build"
 }

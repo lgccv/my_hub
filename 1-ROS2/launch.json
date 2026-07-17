@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "调试 ROS2 Launch 文件",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "/opt/ros/humble/bin/ros2",
+      "args": [
+        "launch",
+        "learning_python_action",
+        "simple_launch.py",
+        "enable_client:=false",
+        "client_delay:=2.0"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "python": "/usr/bin/python3",
+      "env": {
+        "AMENT_PREFIX_PATH": "/home/standard/code/ros2/install/learning_python_action:/home/standard/code/ros2/result/learning_interfaces:/opt/ros/humble",
+        "CMAKE_PREFIX_PATH": "/home/standard/code/ros2/install/learning_python_action:/home/standard/code/ros2/result/learning_interfaces:/opt/ros/humble",
+        "PYTHONPATH": "/home/standard/code/ros2/install/learning_python_action/lib/python3.10/site-packages:/home/standard/code/ros2/result/learning_interfaces/local/lib/python3.10/dist-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages",
+        "LD_LIBRARY_PATH": "/home/standard/code/ros2/result/learning_interfaces/lib:/opt/ros/humble/lib",
+        "PATH": "/opt/ros/humble/bin:${env:PATH}"
+      }
+    },
+    {
+      "name": "Attach ROS2 Launch",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "justMyCode": false
+    },
+    {
+        "name": "Attach Action Server",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+            "host": "localhost",
+            "port": 5678
+        },
+        "justMyCode": false
+    }
+  ]
+}

@@ -10,6 +10,21 @@
             "request": "launch",
             "program": "/Users/jodocls/Desktop/code/my_hub/0-路径规划/chhRobotics/PathPlanning/Dijkstra/demo/Dijkstra_PathPlanning.py",
             "console": "integratedTerminal"
-        }
+        },
+        {
+            "type": "cmake",
+            "request": "launch",
+            "name": "CMake: Debug third_party configure",
+            "cmakeDebugType": "configure",
+            "clean": true
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "debug_bash",
+            "args":["--release","-j","4"],
+            "cwd": "${workspaceFolder}",
+            "program": "/workspace/src/perception-platform/app/script/build.sh",
+        },
     ]
 }

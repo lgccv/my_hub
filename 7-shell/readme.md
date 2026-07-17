@@ -14,3 +14,8 @@ file $(which cmake)
 # 如何查电脑装了哪些库
 apt list --installed
 apt list --installed | grep pcl
+
+# opt目录和usr目录有什么区别？
+/usr 是系统标准软件目录,包含bin/lib/include/share
+
+/opt 是第三方厂商独立软件目录

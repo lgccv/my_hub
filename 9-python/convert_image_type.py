@@ -7,15 +7,15 @@ import json
 orig_image = r"/Users/jodocls/Desktop/123/images/orig_image"
 labelme_image = r"/Users/jodocls/Desktop/123/images/labelme_image"
 
-
-
 def convert_image_type():
-    for name in tqdm(os.listdir(orig_image)):
+    orig_image = r"/Users/jodocls/Desktop/123/autolabel/train/labelme"
+    labelme_image = r"/Users/jodocls/Desktop/123/autolabel/train/labelme_jpg"
+    json_name = [name for name in os.listdir(orig_image) if name.endswith('.png')]
+    for name in tqdm(json_name):
         image = cv2.imread(os.path.join(orig_image,name))
-        if '.png' in name:
+        if name.endswith('.png'):
             name = name.replace('.png','.jpg')
         cv2.imwrite(os.path.join(labelme_image,name),image)
-
 
 def convert_image_name():
     image_path = "/Users/jodocls/Desktop/123/conver_image/4"
@@ -24,8 +24,6 @@ def convert_image_name():
         new_name = name.replace(" ", "").replace("(", "").replace(")", "")
         os.rename(os.path.join(image_path,name),os.path.join(image_path,new_name))
         os.rename(os.path.join(image_path,name.replace('.jpg','.json')),os.path.join(image_path,new_name.replace('.jpg','.json')))
-
-        
 
 def add_image_prefix():
     prefix = "_4.jpg"
@@ -36,16 +34,15 @@ def add_image_prefix():
         os.rename(os.path.join(image_path,name),os.path.join(image_path,new_name))
         os.rename(os.path.join(image_path,name.replace('.jpg','.json')),os.path.join(image_path,new_name.replace('.jpg','.json')))
 
-
-
 def rename_json_name():
-    image_path = "/Users/jodocls/Desktop/123/conver_image/concat_image/labelme"
+    image_path = "/Users/jodocls/Desktop/123/autolabel/train/labelme"
+    labelme_image = r"/Users/jodocls/Desktop/123/autolabel/train/labelme_jpg"
     json_name = [name for name in os.listdir(image_path) if '.json' in name]
     for name in json_name:
         print(name)
         labelme_file = json.load(open(os.path.join(image_path,name),'r',encoding='UTF-8'))
         labelme_file['imagePath'] = name.replace('.json','.jpg')
-        with open(os.path.join(image_path,name), "w",encoding='UTF-8') as f:
+        with open(os.path.join(labelme_image,name), "w",encoding='UTF-8') as f:
             json.dump(labelme_file, f,indent=4)
 
 

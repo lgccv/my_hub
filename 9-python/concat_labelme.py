@@ -4,16 +4,16 @@ from tqdm import tqdm
 import json
 
 # labelme的路径
-labelmePath = [r'/Users/jodocls/Desktop/123/conver_image/1',
-               r'/Users/jodocls/Desktop/123/conver_image/2',
-               r'/Users/jodocls/Desktop/123/conver_image/3',
-               r'/Users/jodocls/Desktop/123/conver_image/4',
+labelmePath = [r'/Users/jodocls/Desktop/123/StandardJNDataset.v23-jnv4.10.coco-segmentation/train/labelme',
+               r'/Users/jodocls/Desktop/123/StandardJNDataset.v23-jnv4.10.coco-segmentation/valid/labelme',
+               r'/Users/jodocls/Desktop/123/StandardJNDataset.v23-jnv4.10.coco-segmentation/test/labelme',
+               r'/Users/jodocls/Desktop/123/autolabel/train/labelme',
              ]
 
 # 保存labelme的路径
-save_dir = r'/Users/jodocls/Desktop/123/conver_image/concat_image/labelme'
+save_dir = r'/Users/jodocls/Desktop/123/autolabel/real/labelme'
 
-image_save_path = r'/Users/jodocls/Desktop/123/conver_image/concat_image/images'
+image_save_path = r'/Users/jodocls/Desktop/123/autolabel/real/images'
 
 for path in labelmePath:
     if not os.path.exists(path):
