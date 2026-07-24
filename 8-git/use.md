@@ -39,3 +39,7 @@ Host github.com
 - git reset 的用法是什么？
 
 - git merge和git rebase 有什么区别？
+
+- 如果远端比本地超前，直接git push是不行的
+-- git pull --rebase origin main
+-- git push
