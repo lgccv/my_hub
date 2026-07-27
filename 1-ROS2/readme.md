@@ -6,7 +6,9 @@
 
 - 第二种方法:
 先用命令命令行启动，然后attach进去
+
 1、先装debugpy:python3 -m pip install --user debugpy
+
 2、然后启动roslaunch:
 ```shell
 /usr/bin/python3 -m debugpy \        
@@ -21,13 +23,13 @@
 ## 2、如何断点main.py文件，注意是不同的深度学习环境
 - 1、首先添加:
 ```python
-# debugpy.listen("0.0.0.0",5678)
+# debugpy.listen（("0.0.0.0",5678)）
 # print("wait for debugger attach on port 5678.....")
 # debugpy.wait_for_client()
 ```
 - 2、然后在终端中运行  ros2 launch learning_python_action simple_launch.py
 - 3、在launch.json中启动Attach Action Server
-
+- 手动关掉5678端口: kill -9 $(lsof -t -i :5678)
 
 
 # 对于ros2 c++
@@ -62,6 +64,21 @@ colcon build --packages-select custom_interfaces -DCMAKE_BUILD_TYPE=Debug
 
 #### 查找功能包的路径
 - echo $AMENT_PREFIX_PATH
+
+#### topic的相关指令
+- ros2 topic echo /chatter
+- ros2 topic pub /chatter std_msgs/msg/String "{data:‘123’}"
+
+#### node的相关指令
+- ros2 node info /action/sim
+- ros2 node list
+
+#### service的相关指令
+- ros2 service list
+- ros2 service type /add_two_ints
+- ros2 service call /add_two_ints learning_interface/srv/AddTwoInts "{a: 1, b: 2}"
+
+
 
 #### 看接口有哪些(/opt/ros/humble/share)
 - ros2 interface list
@@ -126,13 +143,13 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 
 # 问题:
-1、ros2的功能包需要放到哪个路径下？一定要在src目录下吗？
+## 1、ros2的功能包需要放到哪个路径下？一定要在src目录下吗？
 不是,可以cd到指定文件夹再 ros2 pkg create
 
-2、colcon build 可以指定编译后的路径吗
+## 2、colcon build 可以指定编译后的路径吗
 可以，colcon build --packages-select learning_interfaces --install-base result
 
-3、source install/setup.zsh到底发生了什么？
+## 3、source install/setup.zsh到底发生了什么？
 ```python
 # 用来查找已经安装好的ros包
 export AMENT_PREFIX_PATH=/home/standard/code/ros2/result/learning_interfaces:$AMENT_PREFIX_PATH
@@ -149,15 +166,32 @@ cd result
 
 source setup.bash  会自动添加上面的变量
 
-4、ros2的python装到哪里？如何证明
+## 4、ros2的python装到哪里？如何证明
 ```python
 - /usr/bin/python
 - which python
 ```
 
-5、pip install安装的包都到了哪里？如何证明
+## 5、pip install安装的包都到了哪里？如何证明
 
-6、--symlink-install是什么意思：
+## 6、--symlink-install是什么意思：
 ```python
 launch.py是软链接，修改以后，不用重新colcon build
+```
+
+
+## 7、sequence size exceeds remaining buffer  这个问题如何解决
+方法一:
+```python
+pkill -9 -f "ros2 launch pkg_python_rewrite"
+pkill -9 -f "install/pkg_python_rewrite/lib/pkg_python_rewrite"
+ros2 daemon stop
+ros2 daemon start
+```
+
+方法二:
+```python
+export ROS_DOMAIN_ID=77
+ros2 launch pkg_python_rewrite python_rewrite.launch.py
+如果你开多个终端一次测试，他们需要都要设置同一个值 export ROS_DOMAIN_ID=77
 ```
