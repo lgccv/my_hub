@@ -1,0 +1,65 @@
+calibration_type: multi_cam_extrinsic
+timestamp: 1786430982
+success: true
+result:
+  cameras:
+    - camera_id: cam_back
+      marker_code: FRACTAL_MARKER_2L_2
+      num_observations: 10
+      num_outliers: 0
+      success: true
+      T_base_camera_link:
+        quat:
+          x: -0.0050611002157964474
+          y: -0.013139881472921385
+          z: 0.99985384863218363
+          w: 0.0096958833993519341
+        xyz:
+          x: -0.66859500243607972
+          y: -0.058852031129004376
+          z: 0.34381650628439397
+    - camera_id: cam_front
+      marker_code: FRACTAL_MARKER_2L_0
+      num_observations: 10
+      num_outliers: 0
+      success: true
+      T_base_camera_link:
+        quat:
+          x: 0.0025264816826249085
+          y: 0.090995478077214823
+          z: -0.025810014255800387
+          w: 0.99551357751862024
+        xyz:
+          x: 0.67143521293357256
+          y: 0.079349098067423601
+          z: 0.47373826801697516
+    - camera_id: cam_left
+      marker_code: FRACTAL_MARKER_2L_3
+      num_observations: 10
+      num_outliers: 0
+      success: true
+      T_base_camera_link:
+        quat:
+          x: -0.029219634392196828
+          y: 0.011047856262369588
+          z: 0.70364441693355328
+          w: 0.70986526352275647
+        xyz:
+          x: -0.059122659453557769
+          y: 0.6419969061927715
+          z: 0.33209648525467328
+    - camera_id: cam_right
+      marker_code: FRACTAL_MARKER_2L_1
+      num_observations: 10
+      num_outliers: 0
+      success: true
+      T_base_camera_link:
+        quat:
+          x: -0.48190607377555045
+          y: 0.4963902797047105
+          z: -0.51447500788811618
+          w: 0.50663467363716408
+        xyz:
+          x: 0.08755603660343747
+          y: -0.6363456686590313
+          z: 0.034000054864163104

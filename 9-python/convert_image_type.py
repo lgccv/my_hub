@@ -4,12 +4,12 @@ from tqdm import tqdm
 import re
 import json
 
-orig_image = r"/Users/jodocls/Desktop/123/images/orig_image"
-labelme_image = r"/Users/jodocls/Desktop/123/images/labelme_image"
+orig_image = r"/Users/jodocls/Desktop/result/result3/steel/save"
+labelme_image = r"/Users/jodocls/Desktop/result/result3/steel/images"
 
 def convert_image_type():
-    orig_image = r"/Users/jodocls/Desktop/123/autolabel/train/labelme"
-    labelme_image = r"/Users/jodocls/Desktop/123/autolabel/train/labelme_jpg"
+    orig_image = r"/Users/jodocls/Desktop/result/result3/steel/save"
+    labelme_image = r"/Users/jodocls/Desktop/result/result3/steel/images"
     json_name = [name for name in os.listdir(orig_image) if name.endswith('.png')]
     for name in tqdm(json_name):
         image = cv2.imread(os.path.join(orig_image,name))
@@ -47,4 +47,4 @@ def rename_json_name():
 
 
 if __name__ == "__main__":
-    rename_json_name()
+    convert_image_type()

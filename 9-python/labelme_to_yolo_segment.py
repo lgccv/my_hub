@@ -3,21 +3,15 @@
 import os
 import json
 
-labelme_path = r"/Users/jodocls/Desktop/123/autolabel/real/labelme"
-yolo_path = r"/Users/jodocls/Desktop/123/autolabel/real/yolo"
+labelme_path = r"/Users/jodocls/Desktop/result/result3/steel/labelme"
+yolo_path = r"/Users/jodocls/Desktop/result/result3/steel/yolo"
 
 label_names = [
-    "wheel-8cWi",
-    "cardboard_smallbox",
-    "gray_box",
-    "guiding",
-    "material_platform",
-    "tag_code_m",
-    "tray",
+   "steelpallet"
 ]
 
 json_name = [name for name in os.listdir(labelme_path) if name.endswith(".json")]
-print("json_name:",len(json_name))
+print("json_num:",len(json_name))
 
 for name in json_name:
     with open(os.path.join(labelme_path,name),mode="r") as f:

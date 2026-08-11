@@ -23,7 +23,7 @@
 ## 2、如何断点main.py文件，注意是不同的深度学习环境
 - 1、首先添加:
 ```python
-# debugpy.listen（("0.0.0.0",5678)）
+# debugpy.listen(("0.0.0.0",5678))
 # print("wait for debugger attach on port 5678.....")
 # debugpy.wait_for_client()
 ```
@@ -72,6 +72,11 @@ colcon build --packages-select custom_interfaces -DCMAKE_BUILD_TYPE=Debug
 #### node的相关指令
 - ros2 node info /action/sim
 - ros2 node list
+
+#### lifecycle的相关指令
+- ros2 lifecycle get lifecycle_pb
+- ros2 lifecycle list lifecycle_pb   可以执行哪几种状态
+- ros2 lifecycle set lifecycle_pb configure  设置节点的状态
 
 #### service的相关指令
 - ros2 service list
@@ -195,3 +200,40 @@ export ROS_DOMAIN_ID=77
 ros2 launch pkg_python_rewrite python_rewrite.launch.py
 如果你开多个终端一次测试，他们需要都要设置同一个值 export ROS_DOMAIN_ID=77
 ```
+
+## LifecycleNode是什么？
+负责节点生命周期管理，了解节点的生命状态
+- def on_configure(self, state: LifecycleState)  准备资源
+- def on_activate(self, state: LifecycleState)   开始对外服务
+- def on_deactivate(self, state: LifecycleState) 停止对外服务
+- def on_cleanup(self, state: LifecycleState)    释放配置资源
+- def on_shutdown(self, state: LifecycleState)   退出前清理全部资源
+
+## 检查URDF语法错误
+```
+sudo apt-get install liburdfdom-tools
+check_urdf src/example/robot2.urdf 
+```
+
+## 查看URDF的结构
+```python
+urdf_to_graphiz src/example/robot2.urdf
+```
+
+## 安装和启动Gazebo
+```python
+sudo apt install ros-humble-gazebo-*
+ros2 launch gazebo_ros gazebo.launch.py
+```
+
+## 在gazebo下添加模型
+.gazebo/models
+在Insert下可以看到模型
+
+## Link在gazebo中的要求
+1、为link添加惯性参数和碰撞属性(collision)
+2、为link添加gazebo标签
+3、为joint添加传动装置
+4、添加gazebo控制器插件
+ros2 launch learning_gazebo load_urdf_into_gazebo.launch.py
+ros2 run teleop_twist_keyboard teleop_twist_keyboard
