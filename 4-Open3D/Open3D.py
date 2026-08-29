@@ -1,5 +1,6 @@
 import open3d as o3d
 import numpy as np
+import math
 
 # 加载txt文件
 def load_xyz(path) -> np.ndarray:
@@ -97,17 +98,17 @@ def down_simple(ply,voxel_size = 0.1):
     return down_pcd
 
 # 裁剪ROI区域
-def reduce_roi(pcd,min_bound,max_bound):
-    bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=[0.4, -0.5, 0.1],max_bound=[2.0, 0.5, 0.7])
+def reduce_roi(pcd,x_min,x_max,y_min,y_max,z_min,z_max):
+    bbox = o3d.geometry.AxisAlignedBoundingBox(min_bound=[x_min, y_min, z_min],max_bound=[x_max, y_max, z_max])
     bbox.color=[0,1,0]
     cropped_pcd = pcd.crop(bbox)
     return cropped_pcd
 
 # 半径滤波
-def radius_filter(pcd):
+def radius_filter(pcd,num=5,radius=0.05):
     clean_pcd, kept_indices = pcd.remove_radius_outlier(  # 含义是：如果一个点在给定半径内邻居数不够，就认为它是离群点。
-        nb_points=5,
-        radius=0.1)
+        nb_points=num,
+        radius=radius)
     return clean_pcd,kept_indices
 
 # 计算法线
@@ -130,3 +131,72 @@ def fit_plane(pcd,distance_threshold,ransac_n,num_iterations):
     inliers = pcd.select_by_index(inlier_indices)
     return a,b,c,d,inliers
 
+
+# 通过欧拉角构造旋转矩阵
+def euler_to_matrix(roll,pitch,yaw):
+    cr, sr = math.cos(roll),math.sin(roll)
+    cp, sp = math.cos(pitch), math.sin(pitch)
+    cy, sy = math.cos(yaw), math.sin(yaw)
+
+    rx = np.array([
+        [1, 0, 0],
+        [0, cr, -sr],
+        [0, sr, cr],
+    ], dtype=np.float64)
+
+    ry = np.array([
+        [cp, 0, sp],
+        [0, 1, 0],
+        [-sp, 0, cp],
+    ], dtype=np.float64)
+
+    rz = np.array([
+        [cy, -sy, 0],
+        [sy, cy, 0],
+        [0, 0, 1],
+    ], dtype=np.float64)
+
+    return rz @ ry @ rx
+
+
+# 通过法线角度过滤点云
+def estimate_and_filter_normals(pcd,normal_radius = 0.03,angle_threshold_deg = 60.0):
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamRadius(radius=normal_radius))
+    points = np.asarray(pcd.points)
+    normals = np.asarray(pcd.normals)
+
+    filtered_points = []
+
+    for point, normal in zip(points,normals):
+        nx, ny, nz = float(normal[0]), float(normal[1]), float(normal[2])
+
+        if math.isnan(nx) or math.isnan(ny) or math.isnan(nz):
+            continue
+
+        length = math.sqrt(ny*ny + nz*nz)
+        theta = math.atan2(length,nx) * 180 / math.pi
+        theta = theta - 180 if theta > 90 else theta
+
+        if abs(theta) < angle_threshold_deg:
+            filtered_points.append(point)
+
+    if len(filtered_points) == 0:
+        return o3d.geometry.PointCloud()
+
+    return points_to_pcd(np.asarray(filtered_points,dtype=np.float64))
+
+
+# 计算法向量和某个轴的夹角
+def angle_of_norm_axis(norm,axis):
+    nx,ny,nz = float(norm[0]),float(norm[1]),float(norm[2])
+    normal_length = math.sqrt(nx*nx+ny*ny+nz*nz)
+
+    if axis == "x":
+        cos_theta = abs(nx) / normal_length
+    if axis == "y":
+        cos_theta = abs(ny) / normal_length
+    if axis == "z":
+        cos_theta = abs(nz) / normal_length
+
+    theta = math.acos(cos_theta) * 180 / math.pi
+    return theta

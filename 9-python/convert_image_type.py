@@ -26,13 +26,14 @@ def convert_image_name():
         os.rename(os.path.join(image_path,name.replace('.jpg','.json')),os.path.join(image_path,new_name.replace('.jpg','.json')))
 
 def add_image_prefix():
-    prefix = "_4.jpg"
-    image_path = "/Users/jodocls/Desktop/123/conver_image/4"
+    prefix = "20260818_"
+    image_path = "/Users/jodocls/Desktop/result/0818/origin_image"
     image_name = [name for name in os.listdir(image_path) if '.jpg' in name]
     for name in tqdm(image_name):
-        new_name = name.replace('.jpg',prefix)
+        # new_name = name.replace('.jpg',prefix)
+        new_name = prefix + name
         os.rename(os.path.join(image_path,name),os.path.join(image_path,new_name))
-        os.rename(os.path.join(image_path,name.replace('.jpg','.json')),os.path.join(image_path,new_name.replace('.jpg','.json')))
+        # os.rename(os.path.join(image_path,name.replace('.jpg','.json')),os.path.join(image_path,new_name.replace('.jpg','.json')))
 
 def rename_json_name():
     image_path = "/Users/jodocls/Desktop/123/autolabel/train/labelme"
@@ -45,6 +46,15 @@ def rename_json_name():
         with open(os.path.join(labelme_image,name), "w",encoding='UTF-8') as f:
             json.dump(labelme_file, f,indent=4)
 
+def convert_image_size():
+    image_path = r"/Users/jodocls/Desktop/result/0818/image"
+    resize_image_path = r"/Users/jodocls/Desktop/result/0818/labelme"
+    image_name = [name for name in os.listdir(image_path) if '.jpg' in name]
+    for name in image_name:
+        image = cv2.imread(os.path.join(image_path,name))
+        size_image = cv2.resize(image,(320,240))
+        cv2.imwrite(os.path.join(resize_image_path,name),size_image)
+
 
 if __name__ == "__main__":
-    convert_image_type()
+    convert_image_size()
