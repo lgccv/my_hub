@@ -24,7 +24,7 @@ Host github.com
 - git config --global user.name "你的名字"
 - git reset --soft HEAD~1   回退一次commit
 - git merge --abort 停止这次合并
-
+- git checkout -b lgc/release_5.76.x origin/release_5.76.x
 
 
 - feat      新功能 feature
@@ -43,3 +43,5 @@ Host github.com
 - 如果远端比本地超前，直接git push是不行的
 -- git pull --rebase origin main
 -- git push
+
+- 为什么一定要git pull -f
