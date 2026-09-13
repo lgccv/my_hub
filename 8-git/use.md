@@ -24,7 +24,9 @@ Host github.com
 - git config --global user.name "你的名字"
 - git reset --soft HEAD~1   回退一次commit
 - git merge --abort 停止这次合并
-
+- git checkout -b lgc/release_5.76.x origin/release_5.76.x 
+- git push --dry-run  模拟推送，可以用于查看会推送到哪个分支
+- git branch -vv  用于查看git pull 推送到哪里去了
 
 
 - feat      新功能 feature
@@ -39,3 +41,9 @@ Host github.com
 - git reset 的用法是什么？
 
 - git merge和git rebase 有什么区别？
+
+- 如果远端比本地超前，直接git push是不行的
+-- git pull --rebase origin main
+-- git push
+
+- 为什么一定要git pull -f

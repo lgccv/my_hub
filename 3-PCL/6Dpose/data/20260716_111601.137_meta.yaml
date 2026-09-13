@@ -1,0 +1,61 @@
+images:
+    src_rgb: 20260716_111601.136_src.png
+    src_depth: 20260716_111601.136_depth.png
+    result_rgb: 20260716_111601.136_result.jpg
+intrinsics:
+    width: 1280
+    height: 720
+    fx: 608.23431396484375
+    fy: 608.43731689453125
+    cx: 637.4072265625
+    cy: 370.79193115234375
+    distortion:
+        -   -0.028045058250427246
+        -   0.035808596760034561
+        -   -7.3424736910965294e-05
+        -   -0.00023600009444635361
+        -   -0.01333985012024641
+        -   0
+        -   0
+        -   0
+extrinsics_4x4:
+    -
+        -   608.23431396484375
+        -   0
+        -   0
+        -   0
+    -
+        -   0
+        -   608.43731689453125
+        -   0
+        -   0
+    -
+        -   0
+        -   0
+        -   1
+        -   0
+    -
+        -   0
+        -   0
+        -   0
+        -   1
+metadata:
+    frame_id: head_camera_color_optical_frame
+    parent_frame_id: base_link
+    frame_index: 9
+    timestamp: 1784200561.135
+transform_current_to_parent:
+    position:
+        x:  0
+        y:  0
+        z:  0
+    orientation:
+        x:  0
+        y:  0
+        z:  0
+        w:  1
+    euler_xyz:
+        roll: -0
+        pitch: 0
+        yaw: -0
+depth_scale: 0.0010000000474974513

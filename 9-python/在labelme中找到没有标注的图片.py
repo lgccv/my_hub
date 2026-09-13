@@ -3,8 +3,8 @@ import shutil
 import json
 from tqdm import tqdm
 
-label_file = r'/Users/jodocls/Desktop/123/conver_image/concat_image/labelme'
-image_dir = r'/Users/jodocls/Desktop/123/conver_image/empty'
+label_file = r'/Users/jodocls/Desktop/result/result3/steel/labelme'
+image_dir = r'/Users/jodocls/Desktop/result/result3/steel/nolabelme'
 
 
 all_file = os.listdir(label_file)

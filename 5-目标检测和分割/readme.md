@@ -23,3 +23,10 @@ python3 -m pip install tensorrt-*-cp3x-none-linux_x86_64.whl
 - export PATH="/usr/local/cuda-12.1/bin:$PATH"
 - source ~/.bashrc
 - nvcc --version
+
+
+## pytorch、cuda的版本
+- nvidia-smi  显卡驱动信息，当前支持的最高CUDA版本
+- nvcc -V    当前使用CUDA的版本
+- ll /usr/local/  # 查看安装了几个CUDA，当前使用哪个版本的CUDA
+- import torch;print(torch.version.cuda)  当前Pytorch的运行CUDA API版本

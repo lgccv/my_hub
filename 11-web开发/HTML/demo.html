@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- 页面标题 -->
+        <title>Orbbect相机采集工具</title>
+        <!-- 设置页面编码 简写 -->
+        <meta charset="utf-8">
+        <!-- 页面刷新 -->
+        <!-- <meta http-equiv="refresh" content="3;https://www.jd.com"> -->
+        <!-- 指定页面的作者 -->
+        <meta name="author" content="zss;123456@126.com">
+        <!-- 页面描述  -->
+        <meta name="description" content="斯坦德开发设计">
+        <!-- 页面搜索关键字 -->
+        <meta name="keywords" content="Java;培训;高薪就业">
+
+        <!-- 引入外部资源,图标 -->
+        <link rel="shortcut icon" href="https://www.baidu.com/favicon.ico" type="image/x-icon">
+
+    </head>
+
+
+
+    <body>
+        <!-- 换行标签br -->
+        this is my fisrt html  1234563534535......<br>
+        this is my fisrt html  1234563534535......<br>
+        <!-- 标题h1-h6字号逐渐减小，自动加粗、换行--->
+        <h1>this is my fisrt html  1234563534535......</h1>
+        <h2>this is my fisrt html  1234563534535......</h2>
+        <a name="1F"></a>
+        <!-- 横线标签 --> 
+        <hr width="400px" align="left">
+        <hr width="40%">
+
+        <!-- 段落标签:段落内部的文字自动换行 -->
+        <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;加油加油加油</p>
+
+        <!-- 加粗 倾斜 下划线中划线-->
+        <b>加油加油加油</b><br>
+        <i>加油加油加油</i><br>
+        <u>加油加油加油</u><br>
+        <del>加油加油加油</del><br>
+        <b><i><u>加油加油加油</u></i></b><br>
+
+        <!-- 预编译标签 -->
+        <pre>
+void print helloworld(){
+    print("hello world")
+}
+        </pre>
+
+
+        <!-- 字体标签 -->
+        <font color="red">加油加油加油</font><br>
+
+        <!-- 显示一个图片 -->
+        <img src="./images/rack_centered_relative_position_explain.png" width="400px" alt="图片加载失败" title="悬浮时的提示">
+
+        <!-- 显示一个视频 -->
+        <video src="video/周杰伦.mp4" controls="controls" autoplay="autoplay"></video><br>
+
+        <!-- 展示音频 -->
+        <audio src="./haha.mp3" controls="controls"></audio><br>
+
+        <!-- 超链接标签 -->
+        <a href="https://www.baidu.com" target="_blank">这是一个百度链接</a><br>
+
+        <!-- 给图片超链接 -->
+        <img src="" alt="">
+        <a href="https://www.baidu.com" target="_blank"><img src="./images/rack_centered_relative_position_explain.png" width="400px" alt="图片加载失败" title="悬浮时的提示"></a>
+
+        <!--  访问锚点 -->
+        <a href="#1F">收集</a>
+        <a href="">回到页面顶部 </a>
+
+        <!-- 无序列表 -->
+        <h1>喜欢的游戏</h1>
+        <ul type="square">
+            <li>aaaa</li>
+            <li>bbbb</li>
+            <li>cccc</li>
+            <li>dddd</li>
+        </ul>
+
+
+        <!-- 有序列表 -->
+        <h1>我学习java的顺序</h1>
+        <ol type="1" start="3">
+            <li>JavaSE</li>
+            <li>前端</li>
+            <li>web后端开发</li>
+            <li>微服务</li>
+            <li>中间件</li>
+        </ol>
+
+
+
+
+        <!-- 表格 table>tr*4>td*4-->
+        <table border="1px" cellspacing="0px" width="500px" height="300px" bgcolor="yellow">
+            <tr  bgcolor="blue">
+                <th>序号</th>
+                <th>姓名</th>
+                <th>年龄</th>
+                <th>成绩</th>
+            </tr>
+            <tr>
+                <td align="center">1001</td>
+                <td>菲菲</td>
+                <td>21</td>
+                <td>65.4</td>
+            </tr>
+            <tr>
+                <td>3009</td>
+                <td>小明</td>
+                <td>19</td>
+                <td>88.7</td>
+            </tr>
+
+        </table>
+
+        <!-- 加入表单 -->
+        <form action="" method="get">
+            用户名: <input type="text" name="uname" placeholder="请输入姓名"><br>
+            展示一下: <input type="text" name="uname" placeholder="展示一下" disabled><br>
+            密码: <input type="password" name="pwd"><br>
+            <!-- 按钮 -->
+            <input type="submit" value="登录"><br>
+
+            <!-- 单选按钮 -->
+            <input type="radio" name="sex" checked value="1">男<br>
+            <input type="radio" name="sex" value="0">女
+
+            <!-- 复选框 -->
+            <input type="checkbox" name="fav" value="1" checked>Java
+            <input type="checkbox" name="fav" value="2" checked>Python
+            <input type="checkbox" name="fav" value="3">C++
+            <input type="checkbox" name="fav" value="4">C#
+            <input type="submit" value="提交表单">
+
+            <!-- 文件 -->
+            <input type="file" name="myfile" id=""><br>
+
+            <!-- 时间 -->
+            <input type="date" name="data1" id="">
+            <input type="time" name="data2" id="">
+            <input type="datetime-local" name="data3" id="">
+
+
+            <!-- 数字控件 -->
+            <input type="number" name="age" id="" min="10" max="18" step="2">
+
+            <!-- 隐藏域 -->
+            <input type="hidden" name="gender1" value="1">
+            <input type="hidden" name="gender2" value="2">
+            <input type="hidden" name="gender3" value="3">
+
+
+            <!-- 重置按钮 -->
+            <input type="reset" value="重置按钮"><br>
+
+
+            <!-- 普通按钮 -->
+            <input type="button" value="按钮1"><br>
+            <button>按钮2</button><br>
+
+
+            <!-- 把图片当做一个按钮 -->
+            <input type="image" src="./images/rack_centered_relative_position_explain.png" width="200px" alt="">
+
+            <!-- 下拉列表 -->
+             <h1>你的城市</h1>
+            <select name="city" id="">
+                <option value="0">--请选择--</option>
+                <option value="1" >南京</option>
+                <option value="2">上海</option>
+                <option value="3" selected>深圳</option>
+            </select><br>
+
+            <!-- 文本域 -->
+            <textarea name="text"  cols="30" rows="10" style="resize: none;"></textarea>
+
+            <!-- label标签 -->
+            <label for="mytext">用户名</label>
+            <input type="text" name="input" id="mytext">
+        </form>
+    </body>
+</html>
