@@ -10,6 +10,7 @@ IMAGE_NAME="dev_lgc:latest"
 WORKSPACE_DIR="${REPO_ROOT}"
 PROJECT_NAME="$(basename "${WORKSPACE_DIR}")"
 CONTAINER_NAME="${PROJECT_NAME}"
+CONTAINER_HOME="${HOME}"
 
 if [ ! -d "${WORKSPACE_DIR}" ]; then
     echo "工作区目录不存在: ${WORKSPACE_DIR}" >&2
@@ -48,6 +49,7 @@ usage() {
   $0 build           检查 package 后构建镜像
   $0 shell           检查 package, 必要时构建镜像, 进入 zsh
   $0 vscode          检查 package, 必要时构建镜像, 后台启动供 VS Code 连接
+  $0 stop            停止 VS Code 容器但保留容器
   $0 run <command>   检查 package, 必要时构建镜像, 在容器中执行命令
 
 示例:
@@ -294,7 +296,76 @@ prepare_tensorrt() {
 
 # 生成交互终端和 VS Code 后台容器共用的 Docker 参数。
 docker_run_args=()
+docker_host_mount_args=()
+docker_host_env_args=()
+docker_required_mounts=()
+
+# 挂载宿主机的 SSH、Git 和 Codex 配置，让容器复用宿主机的认证信息。
+prepare_host_credentials() {
+    docker_host_mount_args=()
+    docker_host_env_args=()
+    docker_required_mounts=()
+
+    if [ -d "${HOME}/.ssh" ]; then
+        docker_host_mount_args+=(
+            -v "${HOME}/.ssh:${CONTAINER_HOME}/.ssh:ro"
+        )
+        docker_required_mounts+=(
+            "${HOME}/.ssh|${CONTAINER_HOME}/.ssh|false"
+        )
+    fi
+
+    if [ -f "${HOME}/.gitconfig" ]; then
+        docker_host_mount_args+=(
+            -v "${HOME}/.gitconfig:${CONTAINER_HOME}/.gitconfig:ro"
+        )
+        docker_required_mounts+=(
+            "${HOME}/.gitconfig|${CONTAINER_HOME}/.gitconfig|false"
+        )
+    fi
+
+    if [ -f "${HOME}/.git-credentials" ]; then
+        docker_host_mount_args+=(
+            -v "${HOME}/.git-credentials:${CONTAINER_HOME}/.git-credentials:ro"
+        )
+        docker_required_mounts+=(
+            "${HOME}/.git-credentials|${CONTAINER_HOME}/.git-credentials|false"
+        )
+    fi
+
+    if [ -d "${HOME}/.config/git" ]; then
+        docker_host_mount_args+=(
+            -v "${HOME}/.config/git:${CONTAINER_HOME}/.config/git:ro"
+        )
+        docker_required_mounts+=(
+            "${HOME}/.config/git|${CONTAINER_HOME}/.config/git|false"
+        )
+    fi
+
+    if [ -d "${HOME}/.codex" ]; then
+        docker_host_mount_args+=(
+            -v "${HOME}/.codex:${CONTAINER_HOME}/.codex:rw"
+        )
+        docker_required_mounts+=(
+            "${HOME}/.codex|${CONTAINER_HOME}/.codex|true"
+        )
+    fi
+
+    if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
+        docker_host_mount_args+=(
+            -v "${SSH_AUTH_SOCK}:/tmp/ssh-agent"
+        )
+        docker_host_env_args+=(
+            -e SSH_AUTH_SOCK=/tmp/ssh-agent
+        )
+        docker_required_mounts+=(
+            "${SSH_AUTH_SOCK}|/tmp/ssh-agent|true"
+        )
+    fi
+}
+
 prepare_docker_run() {
+    prepare_host_credentials
     prepare_x11
     prepare_xauthority
     prepare_devices
@@ -308,6 +379,7 @@ prepare_docker_run() {
         --user root
         --privileged
         --cap-add=ALL
+        --restart=no
         --security-opt seccomp=unconfined
         --security-opt apparmor=unconfined
         --network host
@@ -321,17 +393,25 @@ prepare_docker_run() {
         -v /etc/timezone:/etc/timezone:ro
         -v "${WORKSPACE_DIR}:/workspace:rw"
         -v "${HOME}/sros:/sros:rw"
+        "${docker_host_mount_args[@]}" \
         -e "DISPLAY=${DISPLAY}"
+        "${docker_host_env_args[@]}" \
+        -e "HOME=${CONTAINER_HOME}"
+        -e ZDOTDIR=/root
+        -e "GIT_CONFIG_GLOBAL=${CONTAINER_HOME}/.gitconfig"
+        -e "CODEX_HOME=${CONTAINER_HOME}/.codex"
         -e QT_X11_NO_MITSHM=1
         -e "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}"
         -w /workspace
     )
 }
 
-# 统一封装交互式 docker run 参数,以 root/privileged/host 网络方式进入容器。
+# 统一封装交互式 docker run 参数。交互式命令使用独立的临时容器名，
+# 不影响供 VS Code 使用的持久化容器。
 docker_run_base() {
+    local CONTAINER_NAME="${PROJECT_NAME}-interactive-$$"
+
     prepare_docker_run
-    remove_existing_container
 
     docker run --rm -it \
         "${docker_run_args[@]}" \
@@ -345,19 +425,61 @@ container_workspace_source() {
         --format '{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Source}}{{end}}{{end}}'
 }
 
-# 交互式运行使用 --rm；若同名旧容器存在，先移除以避免名称冲突和旧挂载配置残留。
-remove_existing_container() {
-    if ! docker container inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
-        return 0
+# 检查容器是否包含指定的宿主机挂载。
+container_mount_matches() {
+    local expected_source="$1"
+    local expected_destination="$2"
+    local expected_rw="$3"
+    local source
+    local destination
+    local rw
+
+    while IFS='|' read -r source destination rw; do
+        if [ "${source}" = "${expected_source}" ] \
+            && [ "${destination}" = "${expected_destination}" ] \
+            && [ "${rw}" = "${expected_rw}" ]; then
+            return 0
+        fi
+    done < <(
+        docker container inspect "${CONTAINER_NAME}" \
+            --format '{{range .Mounts}}{{printf "%s|%s|%t\n" .Source .Destination .RW}}{{end}}'
+    )
+
+    return 1
+}
+
+# Docker 无法修改既有容器的挂载配置，检查工作区和认证挂载是否一致。
+container_configuration_matches() {
+    local required_mount
+    local source
+    local destination
+    local rw
+
+    [ "$(container_workspace_source 2>/dev/null || true)" = "${WORKSPACE_DIR}" ] || return 1
+
+    for required_mount in "${docker_required_mounts[@]}"; do
+        IFS='|' read -r source destination rw <<< "${required_mount}"
+        container_mount_matches "${source}" "${destination}" "${rw}" || return 1
+    done
+}
+
+# 保留配置不兼容的旧容器，不删除其容器记录。
+preserve_incompatible_container() {
+    local legacy_name="${CONTAINER_NAME}-legacy-$(date +%Y%m%d%H%M%S)"
+    local suffix=1
+
+    while docker container inspect "${legacy_name}" >/dev/null 2>&1; do
+        legacy_name="${CONTAINER_NAME}-legacy-$(date +%Y%m%d%H%M%S)-${suffix}"
+        suffix=$((suffix + 1))
+    done
+
+    if [ "$(docker container inspect --format '{{.State.Running}}' "${CONTAINER_NAME}")" = "true" ]; then
+        printf '停止旧容器 %s 以更新挂载配置\n' "${CONTAINER_NAME}" >&2
+        docker stop "${CONTAINER_NAME}" >/dev/null
     fi
 
-    local current_workspace
-    current_workspace="$(container_workspace_source 2>/dev/null || true)"
-    if [ "${current_workspace}" != "${WORKSPACE_DIR}" ]; then
-        printf '移除旧容器 %s（当前 /workspace=%s）\n' \
-            "${CONTAINER_NAME}" "${current_workspace:-未挂载}" >&2
-    fi
-    docker rm -f "${CONTAINER_NAME}" >/dev/null
+    docker rename "${CONTAINER_NAME}" "${legacy_name}"
+    printf '旧容器已保留为: %s\n' "${legacy_name}" >&2
 }
 
 # 检查或构建镜像后进入容器内 zsh。
@@ -375,32 +497,50 @@ run_command() {
 # 后台启动一个不会自行退出的容器,供 VS Code Dev Containers 插件附加。
 start_vscode_container() {
     ensure_image
+    prepare_host_credentials
 
     if docker container inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
-        local current_workspace
-        current_workspace="$(container_workspace_source 2>/dev/null || true)"
-        if [ "$(docker container inspect --format '{{.State.Running}}' "${CONTAINER_NAME}")" = "true" ] \
-            && [ "${current_workspace}" = "${WORKSPACE_DIR}" ]; then
-            printf '容器已经在运行: %s\n' "${CONTAINER_NAME}"
+        if container_configuration_matches; then
+            if [ "$(docker container inspect --format '{{.State.Running}}' "${CONTAINER_NAME}")" = "true" ]; then
+                printf '容器已经在运行: %s\n' "${CONTAINER_NAME}"
+            else
+                docker start "${CONTAINER_NAME}" >/dev/null
+                printf '已启动已有容器: %s\n' "${CONTAINER_NAME}"
+            fi
             printf '请在 VS Code 中执行 “Dev Containers: Attach to Running Container...”。\n'
+            printf '停止容器但保留容器: docker stop %s\n' "${CONTAINER_NAME}"
             return 0
         fi
-        if [ "${current_workspace}" != "${WORKSPACE_DIR}" ]; then
-            printf '移除旧容器 %s（当前 /workspace=%s）\n' \
-                "${CONTAINER_NAME}" "${current_workspace:-未挂载}" >&2
-        fi
-        docker rm -f "${CONTAINER_NAME}" >/dev/null
+
+        printf '现有容器 %s 的工作区或认证挂载配置不完整，将保留旧容器并创建新容器。\n' \
+            "${CONTAINER_NAME}" >&2
+        preserve_incompatible_container
     fi
 
     prepare_docker_run
-    docker run --rm -d \
+    docker run -d \
         "${docker_run_args[@]}" \
         "${IMAGE_NAME}" \
         sleep infinity >/dev/null
 
     printf 'VS Code 容器已后台启动: %s\n' "${CONTAINER_NAME}"
     printf '请在 VS Code 中执行 “Dev Containers: Attach to Running Container...”，选择该容器，再选择 /workspace。\n'
-    printf '停止容器: docker stop %s\n' "${CONTAINER_NAME}"
+    printf '停止容器但保留容器: docker stop %s\n' "${CONTAINER_NAME}"
+}
+
+# 停止 VS Code 容器但保留容器，下一次 vscode 命令会执行 docker start。
+stop_vscode_container() {
+    if ! docker container inspect "${CONTAINER_NAME}" >/dev/null 2>&1; then
+        printf '容器不存在: %s\n' "${CONTAINER_NAME}"
+        return 0
+    fi
+
+    if [ "$(docker container inspect --format '{{.State.Running}}' "${CONTAINER_NAME}")" = "true" ]; then
+        docker stop "${CONTAINER_NAME}" >/dev/null
+        printf '容器已停止并保留: %s\n' "${CONTAINER_NAME}"
+    else
+        printf '容器已经是停止状态并保留: %s\n' "${CONTAINER_NAME}"
+    fi
 }
 
 cmd="${1:-default}"
@@ -420,6 +560,9 @@ case "${cmd}" in
         ;;
     vscode)
         start_vscode_container
+        ;;
+    stop)
+        stop_vscode_container
         ;;
     run)
         shift
