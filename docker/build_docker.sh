@@ -10,7 +10,9 @@ IMAGE_NAME="dev_lgc:latest"
 WORKSPACE_DIR="${REPO_ROOT}"
 PROJECT_NAME="$(basename "${WORKSPACE_DIR}")"
 CONTAINER_NAME="${PROJECT_NAME}"
-CONTAINER_HOME="${HOME}"
+# The container runs as root; keep its HOME aligned with /root so VS Code's
+# zsh shell integration can locate the image-provided /root/.zshrc.
+CONTAINER_HOME="/root"
 
 if [ ! -d "${WORKSPACE_DIR}" ]; then
     echo "工作区目录不存在: ${WORKSPACE_DIR}" >&2
