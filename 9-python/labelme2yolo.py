@@ -102,12 +102,13 @@ def labelme_to_yolo(labelme_dir, output_dir, class_list=None):
 
 def main():
     # 使用示例
-    labelme_dir = r"/Users/jodocls/Desktop/result/bake_image/labelme"  # 替换为你的Labelme JSON文件目录
-    output_dir = r"/Users/jodocls/Desktop/result/bake_image/labels"         # 替换为输出目录
+    labelme_dir = r"/Users/jodocls/Downloads/person_side_back_v1_20260825-123913/images/labelme"  # 替换为你的Labelme JSON文件目录
+    output_dir = r"/Users/jodocls/Downloads/person_side_back_v1_20260825-123913/images/labels"         # 替换为输出目录
     
     # 可选: 指定类别列表 (如果为None则自动从文件中提取)
     # class_list = ["person", "car", "dog"]
-    class_list = ['bucket', 'circle', 'handcart', 'pallet', 'two_piers', 'workbin']
+    class_list = ["person","amr"]
+    # class_list = ['bucket', 'circle', 'handcart', 'pallet', 'two_piers', 'workbin']
     
     labelme_to_yolo(labelme_dir, output_dir, class_list)
 

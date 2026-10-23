@@ -15,7 +15,7 @@ def read_image_chinese_path(img_path):
     return img
 
 if __name__ == '__main__':
-    img_dir = r"/Users/jodocls/Desktop/result/bake_image/labelme"
+    img_dir = r"/Users/jodocls/Downloads/person_side_back_v1_20260825-123913/images/images"
     img_list = os.listdir(img_dir)
     img_list = [img for img in img_list if img.endswith('.jpg')]
     for img in tqdm(img_list):

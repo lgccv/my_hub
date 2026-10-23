@@ -7,7 +7,8 @@ import open3d as o3d
 
 REPO_ROOT = Path("/home/standard/code/standard_perception")
 DATA_DIR = REPO_ROOT / "log/sros21/log/data"
-PCL_ORIGIN_CLOUD_PATH = DATA_DIR / "debug_pallet_pcl_origin_cloud.txt"
+PCL_ORIGIN_CLOUD_PATH = DATA_DIR / "sensor_data_line_pallet.txt"
+
 
 BBOX_X = 103
 BBOX_Y = 176

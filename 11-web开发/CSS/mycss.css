@@ -1,0 +1,16 @@
+/* 字体属性 */
+h1{
+    color: red;
+    font-family: 宋体;
+    font-style: italic;
+    font-size: 30px;
+    font-weight: 100;
+}
+
+
+
+/* 文本属性 */
+h1{
+    text-align: center;
+    
+}

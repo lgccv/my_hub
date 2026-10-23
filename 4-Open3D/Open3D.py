@@ -111,9 +111,10 @@ def radius_filter(pcd,num=5,radius=0.05):
         radius=radius)
     return clean_pcd,kept_indices
 
-# 计算法线
+# 计算法线:n可以隐藏和显示法线，-+可以放大和缩小
 def cal_estimate_normals(pcd):
-    pcd.estimate_normals(search_params = o3d.geometry.KDTreeSearchParamHybrid(radius =0.03,max_nn=30))
+    pcd.estimate_normals(search_param = o3d.geometry.KDTreeSearchParamHybrid(radius =0.03,max_nn=30))
+    pcd.normalize_normals()
 
 
 # 读取pcd
@@ -200,3 +201,24 @@ def angle_of_norm_axis(norm,axis):
 
     theta = math.acos(cos_theta) * 180 / math.pi
     return theta
+
+
+# 计算法向量与某个轴的夹角,先投影再计算夹角
+def length_of_norm_axis(norm,axis):
+    nx,ny,nz = float(norm[0]),float(norm[1]),float(norm[2])
+    if axis == "x":
+        length = math.sqrt(ny*ny + nz*nz)
+        theta = math.atan2(length,nx) * 180 / math.pi
+        theta = theta - 180 if theta > 90 else theta
+
+    if axis == "y":
+        length = math.sqrt(nx*nx + nz*nz)
+        theta = math.atan2(length,ny) * 180 / math.pi
+        theta = theta - 180 if theta > 90 else theta
+
+    if axis == "z":
+        length = math.sqrt(nx*nx + ny*ny)
+        theta = math.atan2(length,nz) * 180 / math.pi
+        theta = theta - 180 if theta > 90 else theta
+    return theta
+

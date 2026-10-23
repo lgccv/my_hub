@@ -99,10 +99,11 @@ def yolo_to_labelme(yolo_path,image_path,labelme_path,class_list):
 
 
 if __name__ == "__main__":
-    yolo_path = r"/Users/jodocls/Desktop/result/0626/labels"
-    image_path = r"/Users/jodocls/Desktop/result/0626/images"
-    labelme_path =r"/Users/jodocls/Desktop/result/0626/labelme"
+    yolo_path = r"/Users/jodocls/Downloads/person-yolo-13775/val/labels"
+    image_path = r"/Users/jodocls/Downloads/person-yolo-13775/val/images"
+    labelme_path =r"/Users/jodocls/Downloads/person-yolo-13775/val/labelme"
 
     class_list = ['bucket', 'circle', 'handcart', 'pallet', 'two_piers', 'workbin']
+    class_list = ['person']
 
     yolo_to_labelme(yolo_path,image_path,labelme_path,class_list)
