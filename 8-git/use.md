@@ -27,6 +27,8 @@ Host github.com
 - git checkout -b lgc/release_5.76.x origin/release_5.76.x 
 - git push --dry-run  模拟推送，可以用于查看会推送到哪个分支
 - git branch -vv  用于查看git pull 推送到哪里去了
+- git merge --no-ff --no-commit zfd/ELFIN3.16.x  合并某个分支但不确认
+- git push origin -d lgc/main  删除远程分析
 
 
 - feat      新功能 feature
