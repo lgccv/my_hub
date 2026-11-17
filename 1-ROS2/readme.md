@@ -237,3 +237,15 @@ ros2 launch gazebo_ros gazebo.launch.py
 4、添加gazebo控制器插件
 ros2 launch learning_gazebo load_urdf_into_gazebo.launch.py
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
+
+
+## colcon的用法：
+```
+colcon --log-base "$FOLLOW_MSGS_BUILD_DIR/log" build \   日志保存目录
+  --executor sequential \                                包和包之间的构建顺序
+  --base-paths "$FOLLOW_MSGS_SOURCE" "$PERCEPTION_INTERFACES_SOURCE" \    # 从两个指定源码路径发现包
+  --packages-select easygo_follow_msgs easygo_perception_interfaces \     # 只选择这两个包，不会自动把其他源码依赖包一起
+  --merge-install \                                                       # 两个包共用一个安装前缀，而不是各自建立独立安装目录
+  --build-base "$FOLLOW_MSGS_BUILD_DIR/build" \                           # 中间构建文件目录
+  --install-base "$FOLLOW_INSTALL"                                        # 最终安装目录
+```
